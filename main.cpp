@@ -1,4 +1,6 @@
-﻿#include "fo3d.h"
+﻿//FoUnbaker3D - main.cpp: the main file of program, the primary logic is written here.
+//Copyright (C) 2024, APAMk2
+#include "fo3d.h"
 #include "tinygltf/tiny_gltf.h"
 #include <iostream>
 #include <filesystem>

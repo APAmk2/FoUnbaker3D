@@ -1,3 +1,6 @@
+//FoUnbaker3D - fo3d.cpp: the implementation for FOnline Engine's 3D models parser.
+//Copyright (C) 2024, APAMk2
+
 #include "fo3d.h"
 
 void Mesh_t::read(ByteReader* reader)

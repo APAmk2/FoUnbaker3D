@@ -1,3 +1,6 @@
+//FoUnbaker3D - fo3d.h: the header of FOnline Engine's 3D models parser.
+//Copyright (C) 2024, APAMk2
+
 #pragma once
 #include "ByteReader.hpp"
 #include <string>

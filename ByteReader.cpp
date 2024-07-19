@@ -1,4 +1,5 @@
-//All copyrights goes to JordanCpp, thnx for allowing me to use it - APAMK2
+//ArcanumWorld - ByteReader.cpp: the implementation of byte parser for binary files.
+//Copyright (C) 2023, JordanCpp, alienated from original codebase & used by APAMk2
 
 #include "ByteReader.hpp"
 
