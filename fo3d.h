@@ -43,8 +43,8 @@ class Bone_t
 {
 public:
 	uint32_t nameHash;
-    Matrix transformationMatrix;
-    Matrix globalTransformationMatrix;
+    float transformationMatrix[16];
+    float globalTransformationMatrix[16];
     Mesh_t mesh;
     std::vector<Bone_t> childBones;
 

@@ -28,15 +28,16 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         tinygltf::BufferView texView;
         tinygltf::BufferView tangentView;
         tinygltf::BufferView weightView;
+        tinygltf::BufferView jointsView;
         tinygltf::Accessor indicesAccessor;
         tinygltf::Accessor vertexAccessor;
         tinygltf::Accessor normalsAccessor;
         tinygltf::Accessor texAccessor;
         tinygltf::Accessor tangentAccessor;
         tinygltf::Accessor weightAccessor;
+        tinygltf::Accessor jointsAccessor;
         tinygltf::Node node;
 
-        // This is the raw data buffer. 
         for (size_t i = 0; i < indicesLen; i++)
         {
             //cout << currBone.mesh.indices[i] << endl;
@@ -117,18 +118,28 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
             }
         }
 
+        for (size_t i = 0; i < verticesLen; i++)
+        {
+            for (size_t l = 0; l < BONES_PER_VERTEX; l++)
+            {
+                float2bytes currConv;
+                currConv.value = currBone.mesh.vertices[i].blendIndices[l];
+
+                for (size_t j = 0; j < 4; j++)
+                {
+                    buffer.data.push_back(currConv.bytes[j]);
+                }
+            }
+        }
+
         uint32_t buffersSize = model.buffers.size();
         uint32_t bufferViewsSize = model.bufferViews.size();
 
-        // "The indices of the vertices (ELEMENT_ARRAY_BUFFER) take up 6 bytes in the
-        // start of the buffer.
         indicesView.buffer = buffersSize;
         indicesView.byteOffset = 0;
         indicesView.byteLength = indicesLen * 2;
         indicesView.target = TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER;
 
-        // The vertices take up 36 bytes (3 vertices * 3 floating points * 4 bytes)
-        // at position 8 in the buffer and are of type ARRAY_BUFFER
         verticesView.buffer = buffersSize;
         verticesView.byteOffset = indicesLen * 2;
         verticesView.byteLength = verticesLen * 3 * 4;
@@ -154,7 +165,11 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         weightView.byteLength = verticesLen * 4 * 4;
         weightView.target = TINYGLTF_TARGET_ARRAY_BUFFER;
 
-        // Describe the layout of bufferView1, the indices of the vertices
+        jointsView.buffer = buffersSize;
+        jointsView.byteOffset = (indicesLen * 2) + (verticesLen * 16 * 4);
+        jointsView.byteLength = verticesLen * 4 * 4;
+        jointsView.target = TINYGLTF_TARGET_ARRAY_BUFFER;
+
         indicesAccessor.bufferView = bufferViewsSize;
         indicesAccessor.byteOffset = 0;
         indicesAccessor.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
@@ -163,7 +178,6 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         indicesAccessor.maxValues.push_back(2);
         indicesAccessor.minValues.push_back(0);
 
-        // Describe the layout of bufferView2, the vertices themself
         vertexAccessor.bufferView = bufferViewsSize + 1;
         vertexAccessor.byteOffset = 0;
         vertexAccessor.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
@@ -196,6 +210,12 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         weightAccessor.count = verticesLen;
         weightAccessor.type = TINYGLTF_TYPE_VEC4;
 
+        jointsAccessor.bufferView = bufferViewsSize + 6;
+        jointsAccessor.byteOffset = 0;
+        jointsAccessor.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
+        jointsAccessor.count = verticesLen;
+        jointsAccessor.type = TINYGLTF_TYPE_VEC4;
+
         // Build the mesh primitive and add it to the mesh
         primitive.indices = bufferViewsSize;                 // The index of the accessor for the vertex indices
         primitive.attributes["POSITION"] = bufferViewsSize + 1;  // The index of the accessor for positions
@@ -203,6 +223,7 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         primitive.attributes["TEXCOORD_0"] = bufferViewsSize + 3;
         primitive.attributes["TANGENT"] = bufferViewsSize + 4;
         primitive.attributes["WEIGHTS_0"] = bufferViewsSize + 5;
+        primitive.attributes["JOINTS_0"] = bufferViewsSize + 6;
         primitive.material = 0;
         primitive.mode = TINYGLTF_MODE_TRIANGLES;
         mesh.primitives.push_back(primitive);
@@ -216,12 +237,14 @@ void writeMesh(tinygltf::Model& model, Bone_t& currBone)
         model.bufferViews.push_back(texView);
         model.bufferViews.push_back(tangentView);
         model.bufferViews.push_back(weightView);
+        model.bufferViews.push_back(jointsView);
         model.accessors.push_back(indicesAccessor);
         model.accessors.push_back(vertexAccessor);
         model.accessors.push_back(normalsAccessor);
         model.accessors.push_back(texAccessor);
         model.accessors.push_back(tangentAccessor);
         model.accessors.push_back(weightAccessor);
+        model.accessors.push_back(jointsAccessor);
 
         node.mesh = buffersSize;
         model.nodes.push_back(node);
@@ -237,28 +260,20 @@ void writeModel(file_t& file, filesystem::path filename)
 {
     tinygltf::Model m;
     tinygltf::Scene scene;
-    
     tinygltf::Asset asset;
 
     writeMesh(m, file.skeleton);
-    scene.nodes.push_back(0); // Default scene
-
-    // Define the asset. The version is required
+    scene.nodes.push_back(0);
     asset.version = "2.0";
     asset.generator = "tinygltf";
-
-    // Now all that remains is to tie back all the loose objects into the
-    // our single model.
     m.scenes.push_back(scene);
     m.asset = asset;
 
-    // Create a simple material
     tinygltf::Material mat;
     mat.pbrMetallicRoughness.baseColorFactor = { 1.0f, 0.9f, 0.9f, 1.0f };
     mat.doubleSided = true;
     m.materials.push_back(mat);
 
-    // Save it to a file
     tinygltf::TinyGLTF gltf;
     gltf.WriteGltfSceneToFile(&m, filename.stem().string() + ".gltf", true, true, true, false);
 }
